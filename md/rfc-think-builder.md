@@ -149,12 +149,10 @@ The closure receives the tool input as its first argument, followed by an `McpCo
 
 ### Stack-local captures
 
-Tools can capture references from the enclosing stack frame, enabling powerful patterns like accumulating results:
+Tools can capture mutable references from the enclosing stack frame, enabling powerful patterns like accumulating results:
 
 ```rust
-use std::sync::Mutex;
-
-let results = Mutex::new(Vec::new());
+let mut results = Vec::new();
 
 let _: () = patchwork.think()
     .text("Process each item and record it")
@@ -162,7 +160,7 @@ let _: () = patchwork.think()
         "record",
         "Record a processed item",
         async |input: RecordInput, _cx| {
-            results.lock().unwrap().push(input.item);
+            results.push(input.item);
             Ok(RecordOutput { success: true })
         },
         sacp::tool_fn_mut!(),
@@ -171,10 +169,12 @@ let _: () = patchwork.think()
     .await?;
 
 // After the think block, `results` contains all recorded items
-println!("Recorded: {:?}", results.lock().unwrap());
+println!("Recorded: {:?}", results);
 ```
 
-This works because patchwork uses `run_session()` internally, which avoids `'static` bounds on the tool closures. Tool invocations are serialized (one at a time) since the closure is `AsyncFnMut`.
+This works because:
+1. Patchwork uses `run_session()` internally, which avoids `'static` bounds on tool closures
+2. Tools are `AsyncFnMut`, so invocations are serialized (one at a time), giving exclusive `&mut` access
 
 ### Defining tools without embedding
 
