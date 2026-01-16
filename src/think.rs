@@ -3,13 +3,13 @@
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
-use sacp::mcp_server::{McpContext, McpServer, McpServerBuilder, ToolFnResponder};
+use sacp::mcp_server::{McpContext, McpServer, McpServerBuilder};
 use sacp::schema::{
     PermissionOptionKind, RequestPermissionOutcome, RequestPermissionRequest,
-    RequestPermissionResponse, SessionNotification,
+    RequestPermissionResponse, SelectedPermissionOutcome, SessionNotification,
 };
 use sacp::util::MatchMessage;
-use sacp::{BoxFuture, ChainResponder, ClientToAgent, JrConnectionCx, JrResponder, NullResponder};
+use sacp::{BoxFuture, ClientToAgent, JrConnectionCx, JrResponder, NullResponder};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tracing::{debug, info, instrument, trace, warn};
@@ -171,7 +171,7 @@ where
         description: &str,
         func: F,
         tool_future_hack: H,
-    ) -> ThinkBuilder<'bound, ChainResponder<R, ToolFnResponder<F, I, O, ClientToAgent>>, Output>
+    ) -> ThinkBuilder<'bound, impl JrResponder<ClientToAgent>, Output>
     where
         I: JsonSchema + DeserializeOwned + Send + 'static,
         O: JsonSchema + Serialize + Send + 'static,
@@ -210,7 +210,7 @@ where
         description: &str,
         func: F,
         tool_future_hack: H,
-    ) -> ThinkBuilder<'bound, ChainResponder<R, ToolFnResponder<F, I, O, ClientToAgent>>, Output>
+    ) -> ThinkBuilder<'bound, impl JrResponder<ClientToAgent>, Output>
     where
         I: JsonSchema + DeserializeOwned + Send + 'static,
         O: JsonSchema + Serialize + Send + 'static,
@@ -280,7 +280,8 @@ where
         let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"));
         cx.build_session(&cwd)
             .with_mcp_server(server.build())?
-            .run_session(async |mut session| {
+            .block_task()
+            .run_until(async |mut session| {
                 session.send_prompt(&prompt)?;
                 tracing::info!(?prompt, "sending prompt");
 
@@ -313,16 +314,18 @@ where
                                                 | PermissionOptionKind::AllowAlways => true,
                                                 PermissionOptionKind::RejectOnce
                                                 | PermissionOptionKind::RejectAlways => false,
+                                                _ => false,
                                             });
                                         let outcome = option
-                                            .map(|o| RequestPermissionOutcome::Selected {
-                                                option_id: o.id.clone(),
+                                            .map(|o| {
+                                                RequestPermissionOutcome::Selected(
+                                                    SelectedPermissionOutcome::new(
+                                                        o.option_id.clone(),
+                                                    ),
+                                                )
                                             })
                                             .unwrap_or(RequestPermissionOutcome::Cancelled);
-                                        request_cx.respond(RequestPermissionResponse {
-                                            outcome,
-                                            meta: None,
-                                        })
+                                        request_cx.respond(RequestPermissionResponse::new(outcome))
                                     },
                                 )
                                 .await

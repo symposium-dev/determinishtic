@@ -2,9 +2,10 @@
 
 use sacp::{
     ClientToAgent, Component, JrConnectionCx, NullResponder,
-    schema::{InitializeRequest, InitializeResponse},
+    link::AgentToClient,
+    schema::{InitializeRequest, InitializeResponse, ProtocolVersion},
 };
-use sacp_conductor::McpBridgeMode;
+use sacp_conductor::{AgentOnly, Conductor, McpBridgeMode};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use tokio::sync::oneshot;
@@ -31,7 +32,9 @@ impl Patchwork {
     /// This spawns a background task to run the connection to the agent.
     /// The component will be used to communicate with an LLM agent.
     #[instrument(name = "Patchwork::new", skip_all)]
-    pub async fn new(component: impl Component + 'static) -> Result<Self, crate::Error> {
+    pub async fn new(
+        component: impl Component<AgentToClient> + 'static,
+    ) -> Result<Self, crate::Error> {
         debug!("spawning connection task");
         let (tx, rx) = oneshot::channel();
 
@@ -43,9 +46,9 @@ impl Patchwork {
                     // Keep running until the connection closes
                     std::future::pending::<Result<(), sacp::Error>>().await
                 })
-                .serve(sacp_conductor::Conductor::new(
-                    "patchwork-conductor".to_string(),
-                    vec![component],
+                .serve(Conductor::new_agent(
+                    "patchwork-conductor",
+                    AgentOnly(component),
                     McpBridgeMode::default(),
                 ))
                 .await
@@ -56,12 +59,7 @@ impl Patchwork {
 
         // FIXME: we should check that it supports MCP-over-ACP
         let InitializeResponse { .. } = cx
-            .send_request(InitializeRequest {
-                protocol_version: Default::default(),
-                client_capabilities: Default::default(),
-                client_info: Default::default(),
-                meta: Default::default(),
-            })
+            .send_request(InitializeRequest::new(ProtocolVersion::LATEST))
             .block_task()
             .await?;
 

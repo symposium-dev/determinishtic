@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 # ACP/MCP integration
-sacp = "9.0.0"
+sacp = "10.1.0"
 
 # Serialization and schema
 schemars = { version = "1.0", features = ["derive"] }
@@ -23,11 +23,11 @@ thiserror = "2.0"
 
 # Logging
 tracing = "0.1"
-sacp-conductor = "9.0.0"
+sacp-conductor = "10.0.1"
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-sacp-tokio = "9.0.0"
+sacp-tokio = "10.1.0"
 clap = { version = "4.0", features = ["derive"] }
 walkdir = "2.5"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
