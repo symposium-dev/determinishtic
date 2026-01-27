@@ -1,14 +1,14 @@
-# patchwork-rs
+# determinishtic
 
-An easy API to integrate determinishtic computation with LLM-powered reasoning.
+An easy API to integrate deterministic computation with LLM-powered reasoning.
 
 ```rust
-use patchwork::Patchwork;
+use determinishtic::Determinishtic;
 use sacp_tokio::AcpAgent;
 
 #[tokio::main]
-async fn main() -> Result<(), patchwork::Error> {
-    let patchwork = Patchwork::new(AcpAgent::zed_claude_code()).await?;
+async fn main() -> Result<(), determinishtic::Error> {
+    let d = Determinishtic::new(AcpAgent::zed_claude_code()).await?;
 
     // Rust handles the deterministic parts
     let files = std::fs::read_dir("./docs")?
@@ -20,7 +20,7 @@ async fn main() -> Result<(), patchwork::Error> {
         let contents = std::fs::read_to_string(entry.path())?;
 
         // LLM handles the non-deterministic reasoning
-        let summary: String = patchwork.think()
+        let summary: String = d.think()
             .text("Summarize in one sentence:")
             .display(&contents)
             .await?;

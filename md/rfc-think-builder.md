@@ -2,7 +2,7 @@
 
 ## Summary
 
-Patchwork-rs is a Rust library for blending deterministic programming with LLM-powered reasoning. It provides a builder-style API for constructing prompts that can invoke Rust closures as MCP tools, enabling seamless interleaving of structured code and natural language processing.
+Determinishtic is a Rust library for blending deterministic programming with LLM-powered reasoning. It provides a builder-style API for constructing prompts that can invoke Rust closures as MCP tools, enabling seamless interleaving of structured code and natural language processing.
 
 ## Motivation
 
@@ -12,13 +12,13 @@ Modern applications increasingly benefit from LLM capabilities, but integrating 
 2. **Separate prompt files** - Context switch between code and prompts, hard to pass runtime values
 3. **Framework lock-in** - Heavy abstractions that obscure what's actually happening
 
-Patchwork-rs takes a different approach: LLM interactions are first-class Rust expressions. The `think` builder composes prompts programmatically while allowing the LLM to call back into typed Rust closures via MCP tools.
+Determinishtic takes a different approach: LLM interactions are first-class Rust expressions. The `think` builder composes prompts programmatically while allowing the LLM to call back into typed Rust closures via MCP tools.
 
 This is inspired by the [Patchwork programming language](https://github.com/patchwork-lang/patchwork), which pioneered the idea of `think` blocks that blend imperative code with LLM reasoning.
 
 ### Philosophy: Deterministic Code, Non-Deterministic Reasoning
 
-A core principle of patchwork is that **deterministic operations belong in Rust code, while non-deterministic reasoning goes to the LLM**. File I/O, iteration, data transformation—these happen in your Rust code. Summarization, analysis, judgment—these happen via `think()`.
+A core principle of determinishtic is that **deterministic operations belong in Rust code, while non-deterministic reasoning goes to the LLM**. File I/O, iteration, data transformation—these happen in your Rust code. Summarization, analysis, judgment—these happen via `think()`.
 
 ```rust
 // Deterministic: Rust finds and reads files
@@ -32,9 +32,9 @@ let files: Vec<PathBuf> = WalkDir::new(&directory)
 // Deterministic loop, LLM-powered summarization
 for path in &files {
     let contents = std::fs::read_to_string(path)?;
-    
+
     // Non-deterministic: LLM reasons about content
-    let summary: Summary = patchwork.think()
+    let summary: Summary = d.think()
         .text("Summarize this file:")
         .display(&contents)
         .await?;
@@ -46,21 +46,21 @@ for path in &files {
 ### Basic usage
 
 ```rust
-use patchwork::Patchwork;
+use determinishtic::Determinishtic;
 use sacp_tokio::AcpAgent;
 
 #[tokio::main]
-async fn main() -> Result<(), patchwork::Error> {
+async fn main() -> Result<(), determinishtic::Error> {
     let agent = AcpAgent::zed_claude_code();
-    let patchwork = Patchwork::new(agent).await?;
-    
+    let d = Determinishtic::new(agent).await?;
+
     let name = "Alice";
-    let result: String = patchwork.think()
+    let result: String = d.think()
         .text("Say hello to")
         .display(&name)
         .text("in a friendly way.")
         .await?;
-    
+
     println!("{}", result);  // "Hello Alice! Great to meet you!"
     Ok(())
 }
@@ -79,7 +79,7 @@ The `ThinkBuilder` provides methods for building up prompts piece by piece:
 let file_path = Path::new("data/input.txt");
 let contents = std::fs::read_to_string(&file_path)?;
 
-let summary: String = patchwork.think()
+let summary: String = d.think()
     .text("Summarize the following file")
     .debug(&file_path)
     .text(":\n\n")
@@ -108,7 +108,7 @@ And get `"Hello, Alice. How are you?"` — space auto-inserted before the name, 
 If you need precise control, disable smart spacing:
 
 ```rust
-patchwork.think()
+d.think()
     .explicit_spacing()  // disable auto-spacing for this builder
     .text("No")
     .text("Spaces")
@@ -121,7 +121,7 @@ patchwork.think()
 The real power comes from `.tool()`, which registers a Rust closure as an MCP tool the LLM can invoke:
 
 ```rust
-let result: String = patchwork.think()
+let result: String = d.think()
     .text("Process the transcript and invoke")
     .tool(
         "rephrase",
@@ -139,7 +139,7 @@ When you call `.tool(name, description, closure, sacp::tool_fn_mut!())`:
 1. The closure is registered as an MCP tool with the given name and description
 2. The text `<mcp_tool>name</mcp_tool>` is embedded in the prompt
 
-The closure receives the tool input as its first argument, followed by an `McpContext<ClientToAgent>`. It returns `Result<O, sacp::Error>` where `O` is the output type.
+The closure receives the tool input as its first argument, followed by an `McpConnectionTo<Agent>`. It returns `Result<O, sacp::Error>` where `O` is the output type.
 
 **Important**: Due to Rust compiler limitations with async closures ([rust-lang/rust#109417](https://github.com/rust-lang/rust/issues/109417), [#110338](https://github.com/rust-lang/rust/issues/110338)), you must pass `sacp::tool_fn_mut!()` as the final argument. This macro generates a shim that helps the compiler understand the async closure's lifetime.
 
@@ -150,7 +150,7 @@ Tools can capture mutable references from the enclosing stack frame, enabling po
 ```rust
 let mut results = Vec::new();
 
-let _: () = patchwork.think()
+let _: () = d.think()
     .text("Process each item and record it")
     .tool(
         "record",
@@ -168,7 +168,7 @@ println!("Recorded: {:?}", results);
 ```
 
 This works because:
-1. Patchwork uses `run_session()` internally, which avoids `'static` bounds on tool closures
+1. Determinishtic uses `run_session()` internally, which avoids `'static` bounds on tool closures
 2. Tools are `AsyncFnMut`, so invocations are serialized (one at a time), giving exclusive `&mut` access
 
 ### Defining tools without embedding
@@ -176,7 +176,7 @@ This works because:
 Sometimes you want to make a tool available without embedding a reference in the prompt at that point:
 
 ```rust
-let result: String = patchwork.think()
+let result: String = d.think()
     .text("Analyze the sentiment of each paragraph.")
     .text("Use the classify tool for ambiguous cases.")
     .define_tool(
@@ -208,7 +208,7 @@ struct Analysis {
     key_phrases: Vec<String>,
 }
 
-let analysis: Analysis = patchwork.think()
+let analysis: Analysis = d.think()
     .text("Analyze the sentiment of: ")
     .display(&text)
     .await?;
@@ -218,7 +218,7 @@ The LLM is instructed to return its result by calling a `return_result` MCP tool
 
 ## Available agents
 
-Patchwork works with any sacp `Component`. The `sacp-tokio` crate provides convenient constructors for common agents:
+Determinishtic works with any sacp `ConnectTo<Client>`. The `sacp-tokio` crate provides convenient constructors for common agents:
 
 ```rust
 use sacp_tokio::AcpAgent;
@@ -232,7 +232,7 @@ let agent = AcpAgent::google_gemini();
 // OpenAI Codex via Zed Industries ACP bridge
 let agent = AcpAgent::zed_codex();
 
-let patchwork = Patchwork::new(agent).await?;
+let d = Determinishtic::new(agent).await?;
 ```
 
 ## Frequently asked questions
@@ -253,7 +253,7 @@ We use MCP tools both for invoking user-defined closures and for returning resul
 
 ### How does the LLM know to return a result?
 
-The `Patchwork` runtime automatically:
+The `Determinishtic` runtime automatically:
 
 1. Adds a `return_result` MCP tool with a schema matching your expected output type
 2. Includes instructions telling the LLM to call this tool when done
@@ -274,7 +274,7 @@ A tool closure can contain another `think()` call, enabling multi-agent patterns
     "deep_analysis",
     "Perform deep analysis of a topic",
     async |input: AnalysisInput, _cx| {
-        let result: String = patchwork.think()
+        let result: String = d.think()
             .text("Provide deep analysis of:")
             .display(&input.topic)
             .await?;

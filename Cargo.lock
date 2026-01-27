@@ -409,6 +409,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "determinishtic"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "futures",
+ "sacp",
+ "sacp-conductor",
+ "sacp-tokio",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "walkdir",
+]
+
+[[package]]
 name = "diatomic-waker"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -957,25 +976,6 @@ name = "pastey"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b867cad97c0791bbd3aaa6472142568c6c9e8f71937e98379f584cfb0cf35bec"
-
-[[package]]
-name = "patchwork"
-version = "0.2.0"
-dependencies = [
- "clap",
- "futures",
- "sacp",
- "sacp-conductor",
- "sacp-tokio",
- "schemars",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "walkdir",
-]
 
 [[package]]
 name = "pathdiff"

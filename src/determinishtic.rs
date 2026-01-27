@@ -1,4 +1,4 @@
-//! The main Patchwork struct that wraps a ConnectTo component.
+//! The main Determinishtic struct that wraps a ConnectTo component.
 
 use sacp::{
     Agent, Client, ConnectionTo, ConnectTo,
@@ -13,24 +13,24 @@ use tracing::{debug, info, instrument};
 
 use crate::ThinkBuilder;
 
-/// The main entry point for patchwork operations.
+/// The main entry point for determinishtic operations.
 ///
 /// Wraps a sacp [`ConnectTo`] component and provides the [`think`](Self::think) method
 /// for creating LLM-powered reasoning blocks.
 ///
-/// The connection runs in a background task and is cancelled when `Patchwork`
+/// The connection runs in a background task and is cancelled when `Determinishtic`
 /// is dropped.
-pub struct Patchwork {
+pub struct Determinishtic {
     cx: ConnectionTo<Agent>,
     task: JoinHandle<Result<(), sacp::Error>>,
 }
 
-impl Patchwork {
-    /// Create a new Patchwork instance from a sacp ConnectTo component.
+impl Determinishtic {
+    /// Create a new Determinishtic instance from a sacp ConnectTo component.
     ///
     /// This spawns a background task to run the connection to the agent.
     /// The component will be used to communicate with an LLM agent.
-    #[instrument(name = "Patchwork::new", skip_all)]
+    #[instrument(name = "Determinishtic::new", skip_all)]
     pub async fn new(
         component: impl ConnectTo<Client> + 'static,
     ) -> Result<Self, crate::Error> {
@@ -47,7 +47,7 @@ impl Patchwork {
                     std::future::pending::<Result<(), sacp::Error>>().await
                 })
                 .connect_to(ConductorImpl::new_agent(
-                    "patchwork-conductor",
+                    "determinishtic-conductor",
                     AgentOnly(component),
                     McpBridgeMode::default(),
                 ))
@@ -78,7 +78,7 @@ impl Patchwork {
     }
 }
 
-impl Drop for Patchwork {
+impl Drop for Determinishtic {
     fn drop(&mut self) {
         self.task.abort();
     }

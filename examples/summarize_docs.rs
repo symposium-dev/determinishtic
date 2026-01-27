@@ -1,6 +1,6 @@
 //! Example: Summarize all markdown files in a directory.
 //!
-//! This example demonstrates how to use patchwork to blend deterministic
+//! This example demonstrates how to use determinishtic to blend deterministic
 //! Rust code with LLM-powered reasoning. The Rust code handles file discovery
 //! and reading (deterministic), while the LLM summarizes content (non-deterministic).
 //!
@@ -12,7 +12,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
-use patchwork::Patchwork;
+use determinishtic::Determinishtic;
 use sacp_tokio::AcpAgent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -66,7 +66,7 @@ struct FileSummary {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing subscriber with env filter
-    // Use RUST_LOG=patchwork=debug or RUST_LOG=patchwork=trace for more output
+    // Use RUST_LOG=determinishtic=debug or RUST_LOG=determinishtic=trace for more output
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_writer(std::io::stderr)
@@ -92,9 +92,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // Create the patchwork instance connected to the agent
+    // Create the determinishtic instance connected to the agent
     let agent = args.agent.to_acp_agent();
-    let patchwork = Patchwork::new(agent).await?;
+    let d = Determinishtic::new(agent).await?;
 
     // Deterministic loop, LLM-powered summarization
     let mut summaries = Vec::new();
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let contents = std::fs::read_to_string(path)?;
 
         // LLM-powered: Summarize the contents
-        let summary: FileSummary = patchwork
+        let summary: FileSummary = d
             .think()
             .text("Summarize this markdown file in one sentence and list the key topics:")
             .text("\n\n")

@@ -18,7 +18,7 @@ use crate::Error;
 
 /// Builder for composing LLM prompts with embedded tools.
 ///
-/// Created via [`Patchwork::think`](crate::Patchwork::think).
+/// Created via [`Determinishtic::think`](crate::Determinishtic::think).
 ///
 /// The type parameter `Run` tracks the responder chain for registered tools,
 /// allowing tools to capture references from the stack frame.
