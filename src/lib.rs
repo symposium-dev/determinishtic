@@ -26,4 +26,4 @@ mod think;
 
 pub use determinishtic::Determinishtic;
 pub use error::Error;
-pub use think::ThinkBuilder;
+pub use think::{ThinkBuilder, ThinkObserver};

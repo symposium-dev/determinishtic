@@ -2,12 +2,13 @@
 
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use sacp::mcp_server::{McpConnectionTo, McpServer, McpServerBuilder};
 use sacp::role::{HasPeer, Role};
 use sacp::schema::{
     PermissionOptionKind, RequestPermissionOutcome, RequestPermissionRequest,
-    RequestPermissionResponse, SelectedPermissionOutcome, SessionNotification,
+    RequestPermissionResponse, SelectedPermissionOutcome, SessionNotification, StopReason,
 };
 use sacp::util::MatchDispatch;
 use sacp::{Agent, BoxFuture, ConnectionTo, NullRun, RunWithConnectionTo};
@@ -16,6 +17,25 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tracing::{debug, info, trace, warn};
 
 use crate::Error;
+
+/// Observer for session updates during a think block.
+///
+/// Implement this to monitor what the LLM agent is doing in real time.
+/// Default implementations are no-ops, so you only need to override
+/// the callbacks you care about.
+pub trait ThinkObserver: Send + Sync {
+    /// Called with the assembled prompt text before it is sent to the agent.
+    fn on_prompt(&self, _prompt: &str) {}
+
+    /// Called for each session notification (agent text, tool calls, etc.).
+    fn on_notification(&self, _notification: &SessionNotification) {}
+
+    /// Called when the agent requests permission to use a tool.
+    fn on_permission_request(&self, _request: &RequestPermissionRequest) {}
+
+    /// Called when the session stops.
+    fn on_stop(&self, _reason: &StopReason) {}
+}
 
 /// Builder for composing LLM prompts with embedded tools.
 ///
@@ -35,6 +55,7 @@ where
     segments: Vec<Segment>,
     server: McpServerBuilder<R, Run>,
     explicit_spacing: bool,
+    observer: Option<Arc<dyn ThinkObserver>>,
     phantom: PhantomData<fn(&'bound Run) -> Output>,
 }
 
@@ -49,13 +70,14 @@ where
     R: HasPeer<Agent>,
     Output: Send + JsonSchema + DeserializeOwned + 'static,
 {
-    pub(crate) fn new(cx: ConnectionTo<R>) -> Self {
+    pub(crate) fn new(cx: ConnectionTo<R>, observer: Option<Arc<dyn ThinkObserver>>) -> Self {
         Self {
             cx,
             segments: Vec::new(),
             server: McpServer::builder("patchwork".to_string())
                 .instructions("You have access to tools. Call return_result when done."),
             explicit_spacing: false,
+            observer,
             phantom: PhantomData,
         }
         .textln("Please complete the following task to the best of your ability,")
@@ -203,6 +225,7 @@ where
                 .server
                 .tool_fn_mut(name, description, func, tool_future_hack),
             explicit_spacing: self.explicit_spacing,
+            observer: self.observer,
             phantom: PhantomData,
         }
     }
@@ -241,6 +264,7 @@ where
                 .server
                 .tool_fn_mut(name, description, func, tool_future_hack),
             explicit_spacing: self.explicit_spacing,
+            observer: self.observer,
             phantom: PhantomData,
         }
     }
@@ -262,6 +286,7 @@ where
             // Build prompt before consuming server
             let prompt = self.build_prompt();
             let cx = self.cx;
+            let observer = self.observer;
 
             // Use a cell to store the result from the return_result tool
             let mut output: Option<Output> = None;
@@ -277,6 +302,10 @@ where
                 },
                 sacp::tool_fn_mut!(),
             );
+
+            if let Some(observer) = &observer {
+                observer.on_prompt(&prompt);
+            }
 
             info!(prompt_len = prompt.len(), "executing think block");
             trace!(prompt = %prompt, "full prompt");
@@ -298,12 +327,18 @@ where
                         match update {
                             sacp::SessionMessage::StopReason(reason) => {
                                 debug!(?reason, "session stopped");
+                                if let Some(observer) = &observer {
+                                    observer.on_stop(&reason);
+                                }
                                 break;
                             }
                             sacp::SessionMessage::SessionMessage(dispatch) => {
                                 MatchDispatch::new(dispatch)
                                     .if_notification(async |notification: SessionNotification| {
                                         tracing::debug!(?notification, "received session notification");
+                                        if let Some(observer) = &observer {
+                                            observer.on_notification(&notification);
+                                        }
                                         Ok(())
                                     })
                                     .await
@@ -313,6 +348,9 @@ where
                                                 ?request,
                                                 "received tool use permission request"
                                             );
+                                            if let Some(observer) = &observer {
+                                                observer.on_permission_request(&request);
+                                            }
                                             // approve all tool usage
                                             let option =
                                                 request.options.iter().find(|o| match o.kind {

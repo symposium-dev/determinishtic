@@ -12,6 +12,8 @@ use tokio::sync::oneshot;
 use tokio::task::JoinHandle;
 use tracing::{debug, info, instrument};
 
+use std::sync::Arc;
+use crate::think::ThinkObserver;
 use crate::ThinkBuilder;
 
 /// The main entry point for determinishtic operations.
@@ -32,6 +34,7 @@ where
 {
     cx: ConnectionTo<R>,
     task: Option<JoinHandle<Result<(), sacp::Error>>>,
+    observer: Option<Arc<dyn ThinkObserver>>,
 }
 
 impl<R: Role> Determinishtic<R>
@@ -57,7 +60,7 @@ where
     /// }
     /// ```
     pub fn from_connection(cx: ConnectionTo<R>) -> Self {
-        Self { cx, task: None }
+        Self { cx, task: None, observer: None }
     }
 
     /// Start building a think block.
@@ -68,7 +71,13 @@ where
     where
         Output: Send + JsonSchema + DeserializeOwned + 'static,
     {
-        ThinkBuilder::new(self.cx.clone())
+        ThinkBuilder::new(self.cx.clone(), self.observer.clone())
+    }
+
+    /// Attach an observer that will receive all session updates
+    /// from every `think()` call made through this instance.
+    pub fn set_observer(&mut self, observer: Arc<dyn ThinkObserver>) {
+        self.observer = Some(observer);
     }
 }
 
@@ -113,7 +122,7 @@ impl Determinishtic<Agent> {
             .block_task()
             .await?;
 
-        Ok(Self { cx, task: Some(task) })
+        Ok(Self { cx, task: Some(task), observer: None })
     }
 }
 
