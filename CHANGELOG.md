@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2](https://github.com/symposium-dev/determinishtic/compare/v0.1.1...v0.1.2) - 2026-03-19
+
+### Added
+
+- add ThinkObserver trait for monitoring think block sessions
+
 ## [0.1.1](https://github.com/symposium-dev/determinishtic/compare/v0.1.0...v0.1.1) - 2026-01-29
 
 ### Added
