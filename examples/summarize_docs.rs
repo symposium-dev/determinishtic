@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, ValueEnum};
 use determinishtic::Determinishtic;
-use sacp_tokio::AcpAgent;
+use agent_client_protocol_tokio::AcpAgent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::EnvFilter;

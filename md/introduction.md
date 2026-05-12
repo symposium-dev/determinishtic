@@ -10,7 +10,7 @@ Blend deterministic Rust code with LLM-powered reasoning.
 
 ```rust
 use determinishtic::Determinishtic;
-use sacp_tokio::AcpAgent;
+use agent_client_protocol_tokio::AcpAgent;
 
 #[tokio::main]
 async fn main() -> Result<(), determinishtic::Error> {

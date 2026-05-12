@@ -10,7 +10,7 @@ Blend deterministic Rust code with LLM-powered reasoning.
 
 ```rust
 use determinishtic::Determinishtic;
-use sacp_tokio::AcpAgent;
+use agent_client_protocol_tokio::AcpAgent;
 
 #[tokio::main]
 async fn main() -> Result<(), determinishtic::Error> {
@@ -45,10 +45,10 @@ Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 determinishtic = "0.1"
-sacp = "11.0.0-alpha.1"
+agent-client-protocol = "0.11"
 
 [dev-dependencies]
-sacp-tokio = "11.0.0-alpha.1"
+agent-client-protocol-tokio = "0.11"
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -86,7 +86,7 @@ The output type must implement `JsonSchema` and `Deserialize` - the LLM returns 
 Register tools that the LLM can call during reasoning:
 
 ```rust
-use sacp::tool_fn_mut;
+use agent_client_protocol::tool_fn_mut;
 
 let mut results = Vec::new();
 

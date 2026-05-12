@@ -12,7 +12,8 @@ categories = ["asynchronous", "development-tools"]
 
 [dependencies]
 # ACP/MCP integration
-sacp = "11.0.0-alpha.1"
+agent-client-protocol = "0.11"
+agent-client-protocol-conductor = "0.11"
 
 # Serialization and schema
 schemars = { version = "1.0", features = ["derive"] }
@@ -28,11 +29,10 @@ thiserror = "2.0"
 
 # Logging
 tracing = "0.1"
-sacp-conductor = "11.0.0-alpha.1"
 
 [dev-dependencies]
 tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
-sacp-tokio = "11.0.0-alpha.1"
+agent-client-protocol-tokio = "0.11"
 clap = { version = "4.0", features = ["derive"] }
 walkdir = "2.5"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

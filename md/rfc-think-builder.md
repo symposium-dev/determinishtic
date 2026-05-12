@@ -47,7 +47,7 @@ for path in &files {
 
 ```rust
 use determinishtic::Determinishtic;
-use sacp_tokio::AcpAgent;
+use agent_client_protocol_tokio::AcpAgent;
 
 #[tokio::main]
 async fn main() -> Result<(), determinishtic::Error> {
@@ -129,19 +129,19 @@ let result: String = d.think()
         async |input: RephraseInput, _cx| {
             Ok(make_it_nicer(&input.phrase))
         },
-        sacp::tool_fn_mut!(),
+        agent_client_protocol::tool_fn_mut!(),
     )
     .text("on each mean-spirited phrase.")
     .await?;
 ```
 
-When you call `.tool(name, description, closure, sacp::tool_fn_mut!())`:
+When you call `.tool(name, description, closure, agent_client_protocol::tool_fn_mut!())`:
 1. The closure is registered as an MCP tool with the given name and description
 2. The text `<mcp_tool>name</mcp_tool>` is embedded in the prompt
 
-The closure receives the tool input as its first argument, followed by an `McpConnectionTo<Agent>`. It returns `Result<O, sacp::Error>` where `O` is the output type.
+The closure receives the tool input as its first argument, followed by an `McpConnectionTo<Agent>`. It returns `Result<O, agent_client_protocol::Error>` where `O` is the output type.
 
-**Important**: Due to Rust compiler limitations with async closures ([rust-lang/rust#109417](https://github.com/rust-lang/rust/issues/109417), [#110338](https://github.com/rust-lang/rust/issues/110338)), you must pass `sacp::tool_fn_mut!()` as the final argument. This macro generates a shim that helps the compiler understand the async closure's lifetime.
+**Important**: Due to Rust compiler limitations with async closures ([rust-lang/rust#109417](https://github.com/rust-lang/rust/issues/109417), [#110338](https://github.com/rust-lang/rust/issues/110338)), you must pass `agent_client_protocol::tool_fn_mut!()` as the final argument. This macro generates a shim that helps the compiler understand the async closure's lifetime.
 
 ### Stack-local captures
 
@@ -159,7 +159,7 @@ let _: () = d.think()
             results.push(input.item);
             Ok(RecordOutput { success: true })
         },
-        sacp::tool_fn_mut!(),
+        agent_client_protocol::tool_fn_mut!(),
     )
     .await?;
 
@@ -183,13 +183,13 @@ let result: String = d.think()
         "classify",
         "Classify sentiment of ambiguous text",
         async |text: ClassifyInput, _cx| Ok(classify_sentiment(&text)),
-        sacp::tool_fn_mut!(),
+        agent_client_protocol::tool_fn_mut!(),
     )
     .tool(
         "summarize",
         "Summarize multiple paragraphs",
         async |paras: SummarizeInput, _cx| Ok(summarize_all(&paras)),
-        sacp::tool_fn_mut!(),
+        agent_client_protocol::tool_fn_mut!(),
     )
     .await?;
 ```
@@ -218,10 +218,10 @@ The LLM is instructed to return its result by calling a `return_result` MCP tool
 
 ## Available agents
 
-Determinishtic works with any sacp `ConnectTo<Client>`. The `sacp-tokio` crate provides convenient constructors for common agents:
+Determinishtic works with any `agent-client-protocol` `ConnectTo<Client>`. The `agent-client-protocol-tokio` crate provides convenient constructors for common agents:
 
 ```rust
-use sacp_tokio::AcpAgent;
+use agent_client_protocol_tokio::AcpAgent;
 
 // Claude Code via Zed Industries ACP bridge
 let agent = AcpAgent::zed_claude_code();
@@ -261,7 +261,7 @@ The `Determinishtic` runtime automatically:
 
 ### What's with the `tool_fn_mut!()` macro?
 
-The Rust compiler currently has limitations with async closures that capture references. The `sacp::tool_fn_mut!()` macro generates a shim that helps the compiler understand the relationship between the closure and its future. This is a workaround until async closures are fully stabilized in Rust.
+The Rust compiler currently has limitations with async closures that capture references. The `agent_client_protocol::tool_fn_mut!()` macro generates a shim that helps the compiler understand the relationship between the closure and its future. This is a workaround until async closures are fully stabilized in Rust.
 
 See [rust-lang/rust#109417](https://github.com/rust-lang/rust/issues/109417) and [rust-lang/rust#110338](https://github.com/rust-lang/rust/issues/110338) for details.
 
@@ -280,7 +280,7 @@ A tool closure can contain another `think()` call, enabling multi-agent patterns
             .await?;
         Ok(result)
     },
-    sacp::tool_fn_mut!(),
+    agent_client_protocol::tool_fn_mut!(),
 )
 ```
 

@@ -8,7 +8,7 @@
 //!
 //! ```rust,ignore
 //! use determinishtic::Determinishtic;
-//! use sacp::ConnectTo;
+//! use agent_client_protocol::ConnectTo;
 //!
 //! let d = Determinishtic::new(component).await?;
 //!

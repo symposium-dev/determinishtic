@@ -4,14 +4,14 @@ use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use sacp::mcp_server::{McpConnectionTo, McpServer, McpServerBuilder};
-use sacp::role::{HasPeer, Role};
-use sacp::schema::{
+use agent_client_protocol::mcp_server::{McpConnectionTo, McpServer, McpServerBuilder};
+use agent_client_protocol::role::{HasPeer, Role};
+use agent_client_protocol::schema::{
     PermissionOptionKind, RequestPermissionOutcome, RequestPermissionRequest,
     RequestPermissionResponse, SelectedPermissionOutcome, SessionNotification, StopReason,
 };
-use sacp::util::MatchDispatch;
-use sacp::{Agent, BoxFuture, ConnectionTo, NullRun, RunWithConnectionTo};
+use agent_client_protocol::util::MatchDispatch;
+use agent_client_protocol::{Agent, BoxFuture, ConnectionTo, NullRun, RunWithConnectionTo};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tracing::{debug, info, trace, warn};
@@ -175,7 +175,7 @@ where
     /// access and mutate local data during the session. Tool invocations are
     /// serialized (one at a time) because the closure is `AsyncFnMut`.
     ///
-    /// Due to Rust compiler limitations, you must pass `sacp::tool_fn_mut!()`
+    /// Due to Rust compiler limitations, you must pass `agent_client_protocol::tool_fn_mut!()`
     /// as the final argument.
     ///
     /// # Example
@@ -192,7 +192,7 @@ where
     ///             results.lock().unwrap().push(output.clone());
     ///             Ok(output)
     ///         },
-    ///         sacp::tool_fn_mut!(),
+    ///         agent_client_protocol::tool_fn_mut!(),
     ///     )
     ///     .run()
     ///     .await?
@@ -207,12 +207,12 @@ where
     where
         I: JsonSchema + DeserializeOwned + Send + 'static,
         O: JsonSchema + Serialize + Send + 'static,
-        F: AsyncFnMut(I, McpConnectionTo<R>) -> Result<O, sacp::Error> + Send,
+        F: AsyncFnMut(I, McpConnectionTo<R>) -> Result<O, agent_client_protocol::Error> + Send,
         H: for<'a> Fn(
                 &'a mut F,
                 I,
                 McpConnectionTo<R>,
-            ) -> BoxFuture<'a, Result<O, sacp::Error>>
+            ) -> BoxFuture<'a, Result<O, agent_client_protocol::Error>>
             + Send
             + 'static,
     {
@@ -235,7 +235,7 @@ where
     /// Use this when you want the tool to be available but don't want to
     /// explicitly mention it at this point in the prompt.
     ///
-    /// Due to Rust compiler limitations, you must pass `sacp::tool_fn_mut!()`
+    /// Due to Rust compiler limitations, you must pass `agent_client_protocol::tool_fn_mut!()`
     /// as the final argument.
     pub fn define_tool<I, O, F, H>(
         self,
@@ -247,12 +247,12 @@ where
     where
         I: JsonSchema + DeserializeOwned + Send + 'static,
         O: JsonSchema + Serialize + Send + 'static,
-        F: AsyncFnMut(I, McpConnectionTo<R>) -> Result<O, sacp::Error> + Send,
+        F: AsyncFnMut(I, McpConnectionTo<R>) -> Result<O, agent_client_protocol::Error> + Send,
         H: for<'a> Fn(
                 &'a mut F,
                 I,
                 McpConnectionTo<R>,
-            ) -> BoxFuture<'a, Result<O, sacp::Error>>
+            ) -> BoxFuture<'a, Result<O, agent_client_protocol::Error>>
             + Send
             + 'static,
     {
@@ -300,7 +300,7 @@ where
                     output = Some(input.result);
                     Ok(ReturnResultOutput { success: true })
                 },
-                sacp::tool_fn_mut!(),
+                agent_client_protocol::tool_fn_mut!(),
             );
 
             if let Some(observer) = &observer {
@@ -325,14 +325,14 @@ where
                         let update = session.read_update().await?;
                         trace!(?update, "received session update");
                         match update {
-                            sacp::SessionMessage::StopReason(reason) => {
+                            agent_client_protocol::SessionMessage::StopReason(reason) => {
                                 debug!(?reason, "session stopped");
                                 if let Some(observer) = &observer {
                                     observer.on_stop(&reason);
                                 }
                                 break;
                             }
-                            sacp::SessionMessage::SessionMessage(dispatch) => {
+                            agent_client_protocol::SessionMessage::SessionMessage(dispatch) => {
                                 MatchDispatch::new(dispatch)
                                     .if_notification(async |notification: SessionNotification| {
                                         tracing::debug!(?notification, "received session notification");

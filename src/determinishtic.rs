@@ -1,11 +1,11 @@
 //! The main Determinishtic struct that wraps a ConnectTo component.
 
-use sacp::{
+use agent_client_protocol::{
     Agent, Client, ConnectionTo, ConnectTo,
     role::{HasPeer, Role},
     schema::{InitializeRequest, InitializeResponse, ProtocolVersion},
 };
-use sacp_conductor::{AgentOnly, ConductorImpl, McpBridgeMode};
+use agent_client_protocol_conductor::{AgentOnly, ConductorImpl, McpBridgeMode};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use tokio::sync::oneshot;
@@ -18,7 +18,7 @@ use crate::ThinkBuilder;
 
 /// The main entry point for determinishtic operations.
 ///
-/// Wraps a sacp [`ConnectionTo`] component and provides the [`think`](Self::think) method
+/// Wraps an agent-client-protocol [`ConnectionTo`] component and provides the [`think`](Self::think) method
 /// for creating LLM-powered reasoning blocks.
 ///
 /// The type parameter `R` is the role whose connection we hold. It defaults to `Agent`
@@ -33,7 +33,7 @@ where
     R: HasPeer<Agent>,
 {
     cx: ConnectionTo<R>,
-    task: Option<JoinHandle<Result<(), sacp::Error>>>,
+    task: Option<JoinHandle<Result<(), agent_client_protocol::Error>>>,
     observer: Option<Arc<dyn ThinkObserver>>,
 }
 
@@ -82,7 +82,7 @@ where
 }
 
 impl Determinishtic<Agent> {
-    /// Create a new Determinishtic instance from a sacp ConnectTo component.
+    /// Create a new Determinishtic instance from an agent-client-protocol ConnectTo component.
     ///
     /// This spawns a background task to run the connection to the agent.
     /// The component will be used to communicate with an LLM agent.
@@ -103,7 +103,7 @@ impl Determinishtic<Agent> {
                     // Send the connection context back to the caller
                     let _ = tx.send(cx);
                     // Keep running until the connection closes
-                    std::future::pending::<Result<(), sacp::Error>>().await
+                    std::future::pending::<Result<(), agent_client_protocol::Error>>().await
                 })
                 .connect_to(ConductorImpl::new_agent(
                     "determinishtic-conductor",
